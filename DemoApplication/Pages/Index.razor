@@ -1,0 +1,46 @@
+﻿@page "/"
+@using Syncfusion.Blazor
+@using Syncfusion.Blazor.Buttons
+@using DemoApplication.Models;
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Login</PageTitle>
+
+<div class="login-container">
+    <h1>Login</h1>
+
+    @if (isAuthenticated)
+    {
+        <p>Welcome, @userName!</p>
+        <SfButton Content="Logout" CssClass="e-primary" @onclick="Logout"></SfButton>
+    }
+    else
+    {
+        <SfButton Content="Login With Google" CssClass="e-primary" @onclick="LoginWithGoogle"></SfButton>
+    }
+</div>
+
+@code {
+    private bool isAuthenticated = false;
+    private string userName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+        userName = isAuthenticated ? user.Identity?.Name ?? "User" : string.Empty;
+    }
+
+    private void LoginWithGoogle()
+    {
+        Navigation.NavigateTo("/login-google", forceLoad: true);
+    }
+
+    private async Task Logout()
+    {
+        Navigation.NavigateTo("/logout", forceLoad: true);
+    }
+}

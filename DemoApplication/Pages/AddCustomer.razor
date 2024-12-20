@@ -1,0 +1,115 @@
+﻿@page "/add-customer"
+@attribute [Authorize]
+@using DemoApplication.Models;
+@using Microsoft.EntityFrameworkCore;
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+
+@if (isAuthenticated)
+{
+    <h3>Add Customer</h3>
+
+    <EditForm Model="newCustomer" OnValidSubmit="HandleValidSubmit">
+        <DataAnnotationsValidator />
+        <ValidationSummary />
+
+        <div class="form-group">
+            <label for="FirstName">First Name</label>
+            <InputText @bind-Value=newCustomer.FirstName class="form-control" id="FirstName" />
+            <ValidationMessage For="@(() => newCustomer.FirstName)" />
+        </div>
+        <div class="form-group">
+            <label for="LastName">Last Name</label>
+            <InputText @bind-Value=newCustomer.LastName class="form-control" id="LastName" />
+            <ValidationMessage For="@(() => newCustomer.LastName)" />
+        </div>
+        <div class="form-group">
+            <label for="Gender">Gender</label>
+            <select @bind=newCustomer.Gender class="form-control" id="Gender">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="Race">Race</label>
+            <InputText @bind-Value=newCustomer.Race class="form-control" id="Race" />
+        </div>
+        <div class="form-group">
+            <label for="DoB">Date of Birth</label>
+            <InputDate @bind-Value=newCustomer.DoB class="form-control" id="DoB" />
+        </div>
+        <div class="form-group">
+            <label for="Email">E-mail Address</label>
+            <InputText @bind-Value=newCustomer.Email class="form-control" id="Email" />
+            <ValidationMessage For="@(() => newCustomer.Email)" />
+        </div>
+        <div class="form-group">
+            <label for="PhoneNumber">Phone Number</label>
+            <InputText @bind-Value=newCustomer.PhoneNumber class="form-control" id="PhoneNumber" />
+            <ValidationMessage For="@(() => newCustomer.PhoneNumber)" />
+        </div>
+        <div class="form-group">
+            <label for="Address">Address</label>
+            <InputText @bind-Value=newCustomer.Address class="form-control" id="Address" />
+        </div>
+        <div class="form-group">
+            <label for="Postcode">Postcode</label>
+            <InputText @bind-Value=newCustomer.Postcode class="form-control" id="Postcode" />
+        </div>
+        <div class="form-group">
+            <label for="City">City</label>
+            <InputText @bind-Value=newCustomer.City class="form-control" id="City" />
+        </div>
+        <div class="form-group">
+            <label for="Country">Country</label>
+            <InputText @bind-Value=newCustomer.Country class="form-control" id="Country" />
+        </div>
+        <div class="form-group">
+            <label for="State">State</label>
+            <InputText @bind-Value=newCustomer.State class="form-control" id="State" />
+        </div>
+
+        <button type="submit" class="btn btn-primary add-customer-btn">Add Customer</button>
+    </EditForm>
+
+    <p>@message</p>
+}
+else
+{
+    <p>Please login.</p>
+}
+
+@code {
+    private bool isAuthenticated = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+    }
+
+    private Customer newCustomer = new Customer
+    {
+        Gender = "Male"
+    };
+    private string message = string.Empty;
+
+    private async Task HandleValidSubmit()
+    {
+        var response = await Http.PostAsJsonAsync("api/customer", newCustomer);
+
+        if (response.IsSuccessStatusCode)
+        {
+            message = "Customer added successfully!";
+            newCustomer = new Customer();
+            StateHasChanged();
+        }
+        else
+        {
+            message = "Failed to add customer.";
+        }
+    }
+}

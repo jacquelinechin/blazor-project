@@ -1,0 +1,52 @@
+﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>DemoApplication</PageTitle>
+
+<div class="page">
+    <div class="sidebar">
+        <NavMenu />
+    </div>
+
+    <main>
+        <div class="top-row px-4">
+            @if (isAuthenticated)
+            {
+                <p>Welcome, @userName!</p>
+                <button @onclick="Logout">Logout</button>
+            }
+            else
+            {
+                <button @onclick="Login">Login</button>
+            }
+        </div>
+        <article class="content px-4">
+            @Body
+        </article>
+    </main>
+</div>
+
+@code {
+    private bool isAuthenticated = false;
+    private string userName = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+        userName = isAuthenticated ? user.Identity?.Name ?? "User" : string.Empty;
+    }
+
+    private void Login()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private async Task Logout()
+    {
+        Navigation.NavigateTo("/logout", forceLoad: true);
+    }
+}

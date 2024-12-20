@@ -1,0 +1,211 @@
+﻿@page "/customers"
+@attribute [Authorize]
+@using DemoApplication.Models;
+@using Microsoft.EntityFrameworkCore;
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject HttpClient Http
+@inject IJSRuntime JS
+@using System.Drawing.Text;
+
+@if (isAuthenticated)
+{
+    <h3>Customer List</h3>
+
+    <div class="right-align-container">
+        <button class="btn btn-primary" @onclick="ExportToExcel">Export to Excel</button>
+    </div>
+
+    <div class="searchby">
+        <label for="searchby">Search By</label>
+        <select id="searchby" @onchange="(e => OnSearchByChanged(e))">
+            <option value="FirstName">First Name</option>
+            <option value="LastName">Last Name</option>
+            <option value="Gender">Gender</option>
+            <option value="Race">Race</option>
+            <option value="DoB">Date of Birth</option>
+            <option value="Email">E-mail</option>
+            <option value="PhoneNumber">Phone Number</option>
+            <option value="Address">Address</option>
+            <option value="Postcode">Postcode</option>
+            <option value="City">City</option>
+            <option value="Country">Country</option>
+            <option value="State">State</option>
+        </select>
+    </div>
+
+    <input class="form-control searchbar" placeholder="Search..." @oninput="(e => SearchCustomers(e))" />
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Actions</th>
+                <th class="table-title" @onclick="@(() => SortTable("FirstName"))">First Name</th>
+                <th class ="table-title" @onclick ="@(() => SortTable("LastName"))">Last Name</th>
+                <th class="table-title" @onclick="@(() => SortTable("Gender"))">Gender</th>
+                <th class="table-title" @onclick="@(() => SortTable("Race"))">Race</th>
+                <th class="table-title" @onclick="@(() => SortTable("DoB"))">Date of Birth</th>
+                <th class="table-title" @onclick="@(() => SortTable("Email"))">E-mail</th>
+                <th class="table-title" @onclick="@(() => SortTable("PhoneNumber"))">Phone Number</th>
+                <th class="table-title" @onclick="@(() => SortTable("Address"))">Address</th>
+                <th class="table-title" @onclick="@(() => SortTable("Postcode"))">Postcode</th>
+                <th class="table-title" @onclick="@(() => SortTable("City"))">City</th>
+                <th class="table-title" @onclick="@(() => SortTable("Country"))">Country</th>
+                <th class="table-title" @onclick="@(() => SortTable("State"))">State</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var customer in filteredCustomers)
+            {
+                <tr>
+                    <td>
+                        <button class="icon-button" @onclick="() => EditCustomer(customer.CustomerID)">
+                            <span class="oi oi-pencil" aria-hidden="true"></span>
+                        </button>
+                        <button class="icon-button" @onclick="() => DeleteCustomer(customer.CustomerID)">
+                            <span class="oi oi-trash" aria-hidden="true"></span>
+                        </button>
+                    </td>
+                    <td>@customer.FirstName</td>
+                    <td>@customer.LastName</td>
+                    <td>@customer.Gender</td>
+                    <td>@customer.Race</td>
+                    <td>@customer.DoB.ToShortDateString()</td>
+                    <td>@customer.Email</td>
+                    <td>@customer.PhoneNumber</td>
+                    <td>@customer.Address</td>
+                    <td>@customer.Postcode</td>
+                    <td>@customer.City</td>
+                    <td>@customer.Country</td>
+                    <td>@customer.State</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>Please login.</p>
+}
+
+@code {
+    private bool isAuthenticated = false;
+
+    private List<Customer> customers = new List<Customer>();
+    private List<Customer> filteredCustomers = new();
+    private string searchTerm = string.Empty;
+    private string searchBy = "FirstName";
+    private string sortOrder = "Asc";
+    private string sortBy = "FirstName";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        isAuthenticated = user.Identity?.IsAuthenticated ?? false;
+
+        await LoadCustomers();
+    }
+
+    private async Task LoadCustomers()
+    {
+        customers = await Http.GetFromJsonAsync<List<Customer>>("api/customer");
+        filteredCustomers = new List<Customer>(customers);
+        SortCustomers();
+        StateHasChanged();
+    }
+
+    private void EditCustomer(int id)
+    {
+        Navigation.NavigateTo($"/edit-customer/{id}");
+    }
+
+    public async Task DeleteCustomer(int id)
+    {
+        var response = await Http.DeleteAsync($"api/customer/{id}");
+
+        if (response.IsSuccessStatusCode)
+        {
+            Console.WriteLine("Customer deleted successfully.");
+            await LoadCustomers();
+        }
+        else
+        {
+            Console.WriteLine($"Failed to delete customer. Status: {response.StatusCode}");
+        }
+    }
+
+    private void SearchCustomers(ChangeEventArgs e)
+    {
+        searchTerm = e.Value.ToString();
+
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredCustomers = new List<Customer>(customers);
+        }
+        else
+        {
+            filteredCustomers = customers
+                .Where(c => GetPropertyValue(c, searchBy)
+                ?.ToString()
+                .Contains(searchTerm, StringComparison.OrdinalIgnoreCase) == true)
+                .ToList();
+        }
+
+        SortCustomers();
+    }
+
+    private async Task OnSearchByChanged(ChangeEventArgs e)
+    {
+        searchBy = e.Value.ToString();
+    }
+
+    private void SortCustomers()
+    {
+        if (sortOrder == "Asc")
+        {
+            filteredCustomers = filteredCustomers.OrderBy(c => GetPropertyValue(c, sortBy)).ToList();
+        }
+        else
+        {
+            filteredCustomers = filteredCustomers.OrderByDescending(c => GetPropertyValue(c, sortBy)).ToList();
+        }
+    }
+
+    private void SortTable(String column)
+    {
+        sortBy = column;
+
+        if (sortOrder == "Asc")
+        {
+            sortOrder = "Desc";
+        }
+        else
+        {
+            sortOrder = "Asc";
+        }
+
+        SortCustomers();
+    }
+
+    private object GetPropertyValue(Customer customer, string propertyName)
+    {
+        return customer.GetType().GetProperty(propertyName)?.GetValue(customer, null);
+    }
+
+    private async Task ExportToExcel()
+    {
+        Console.WriteLine("export to excel button pressed.");
+        var response = await Http.GetAsync("api/customer/export-to-excel");
+        if (response.IsSuccessStatusCode)
+        {
+            var fileContent = await response.Content.ReadAsByteArrayAsync();
+            var fileName = "Customers.xlsx";
+            using var stream = new MemoryStream(fileContent);
+            await JS.InvokeVoidAsync("downloadFile", fileName, Convert.ToBase64String(fileContent));
+            await JS.InvokeVoidAsync("console.log", "JS call successful");
+            Console.WriteLine($"File content length: {fileContent.Length}");
+        }
+    }
+}
